@@ -1,10 +1,14 @@
-use std::fmt::Display;
+use std::{any::Any, fmt::Display, rc::Rc};
+
+use crate::lox_callable::LoxCallable;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub(crate) enum Value {
     Number(f64),
     Boolean(bool),
     String(String),
+    // Callable(Box<dyn LoxCallable>),
+    Callable(Box<LoxCallable>),
     Nil,
 }
 
@@ -15,6 +19,7 @@ impl Display for Value {
             Value::Boolean(b) => write!(f, "{}", b),
             Value::String(s) => write!(f, "{}", s),
             Value::Nil => write!(f, "nil"),
+            Value::Callable(c) => write!(f, "{:?}", c),
         }
     }
 }

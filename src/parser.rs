@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::stmt::LoxFunctionNode;
 use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
 use crate::token_type::TokenType;
@@ -25,10 +26,6 @@ impl Parser {
         statements
     }
 
-    fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.assignment()
-    }
-
     fn declaration(&mut self) -> Option<Stmt> {
         if self.match_token(&[VAR]) {
             match self.var_declaration() {
@@ -38,6 +35,10 @@ impl Parser {
                 Err(_) => self.synchronize(),
             }
         }
+        if self.match_token(&[FUN]) {
+            return Some(self.function("function".to_string()).unwrap());
+        }
+
         match self.statement() {
             Ok(stmt) => Some(stmt),
             Err(_) => {
@@ -47,12 +48,38 @@ impl Parser {
         }
     }
 
+    fn expression(&mut self) -> Result<Expr, ParseError> {
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.or()?;
+        if self.match_token(&[EQUAL]) {
+            let equals = self.previous();
+            let value = self.assignment()?;
+            if let Expr::Variable { name } = expr {
+                return Ok(Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                });
+            }
+            return Err(Self::error(
+                equals,
+                "Invalid assignment target.".to_string(),
+            ));
+        }
+        Ok(expr)
+    }
+
     fn statement(&mut self) -> Result<Stmt, ParseError> {
         if self.match_token(&[IF]) {
             return self.if_statement();
         }
         if self.match_token(&[PRINT]) {
             return self.print_statement();
+        }
+        if self.match_token(&[RETURN]) {
+            return self.return_statement();
         }
         if self.match_token(&[LEFT_BRACE]) {
             return Ok(Stmt::Block {
@@ -73,6 +100,24 @@ impl Parser {
         self.consume(SEMICOLON, "Expect ';' after value.".to_string())?;
         Ok(Stmt::Print {
             expression: Box::new(value),
+        })
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt, ParseError> {
+        let keyword: Token = self.previous();
+        let mut value = Expr::Literal {
+            value: Literal::Nil,
+        };
+
+        if !self.check(&SEMICOLON) {
+            value = self.expression()?;
+        }
+
+        self.consume(SEMICOLON, "Expect ';' after return value.".to_string())?;
+
+        Ok(Stmt::Return {
+            keyword,
+            value: Box::new(value),
         })
     }
 
@@ -185,23 +230,32 @@ impl Parser {
         Ok(statements)
     }
 
-    fn assignment(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.or()?;
-        if self.match_token(&[EQUAL]) {
-            let equals = self.previous();
-            let value = self.assignment()?;
-            if let Expr::Variable { name } = expr {
-                return Ok(Expr::Assign {
-                    name,
-                    value: Box::new(value),
-                });
+    fn function(&mut self, kind: String) -> Result<Stmt, ParseError> {
+        let name: Token = self.consume(IDENTIFIER, format!("Expect {} name.", kind))?;
+        self.consume(LEFT_PAREN, format!("Expect '(' after {} name.", kind))?;
+        let mut params = Vec::new();
+        if !self.check(&RIGHT_PAREN) {
+            loop {
+                if params.len() >= 255 {
+                    Self::error(
+                        self.peek(),
+                        "Cannot have more than 255 parameters.".to_string(),
+                    );
+                }
+                params.push(self.consume(IDENTIFIER, "Expect parameter name.".to_string())?);
+
+                if !self.match_token(&[COMMA]) {
+                    break;
+                }
             }
-            return Err(Self::error(
-                equals,
-                "Invalid assignment target.".to_string(),
-            ));
         }
-        Ok(expr)
+        self.consume(RIGHT_PAREN, "Expect ')' after parameters.".to_string())?;
+
+        self.consume(LEFT_BRACE, format!("Expect '{{' before {} body.", kind))?;
+        let body = self.block()?;
+        Ok(Stmt::Function {
+            function: Box::new(LoxFunctionNode { name, body, params }),
+        })
     }
 
     fn or(&mut self) -> Result<Expr, ParseError> {
@@ -299,7 +353,45 @@ impl Parser {
                 right: Box::new(right),
             });
         }
-        self.primary()
+        self.call()
+    }
+
+    fn call(&mut self) -> Result<Expr, ParseError> {
+        let mut primary = self.primary();
+        loop {
+            if self.match_token(&[LEFT_PAREN]) {
+                primary = self.finish_call(primary?);
+            } else {
+                break;
+            }
+        }
+
+        primary
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, ParseError> {
+        let mut arguments = Vec::new();
+        if !self.check(&RIGHT_PAREN) {
+            loop {
+                if arguments.len() >= 255 {
+                    Self::error(
+                        self.peek(),
+                        "Cannot have more than 255 arguments.".to_string(),
+                    );
+                }
+                arguments.push(Box::new(self.expression()?));
+
+                if !self.match_token(&[COMMA]) {
+                    break;
+                }
+            }
+        }
+        let paren = self.consume(RIGHT_PAREN, "Expect ')' after arguments.".to_string())?;
+        Ok(Expr::Call {
+            callee: Box::new(callee),
+            paren,
+            arguments,
+        })
     }
 
     fn primary(&mut self) -> Result<Expr, ParseError> {
