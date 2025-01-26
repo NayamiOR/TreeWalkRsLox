@@ -1,5 +1,6 @@
 use crate::environment::Environment;
 use crate::expr::Expr;
+use crate::native_functions::global_env;
 use crate::runtime_error::RuntimeError;
 use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
@@ -17,28 +18,8 @@ pub(crate) struct Interpreter {
 
 impl Interpreter {
     pub(crate) fn new() -> Self {
-        let globals = Environment::new();
+        let globals = global_env();
         let environment = Rc::clone(&globals);
-
-        // Define native functions
-
-        // Define clock function
-        globals.borrow_mut().define(
-            "clock".to_string(),
-            Callable({
-                let f = |_: &mut Interpreter, _: Vec<Box<Value>>| {
-                    let now = std::time::SystemTime::now();
-                    let duration = now.duration_since(std::time::UNIX_EPOCH).unwrap();
-                    Number(duration.as_secs_f64())
-                };
-                Lox::NativeFunction {
-                    arity: 0,
-                    function: Box::new(f),
-                }
-            }),
-        );
-
-        // End of defining native functions
 
         Self {
             globals,

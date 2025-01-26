@@ -7,8 +7,8 @@ pub(crate) enum Value {
     Number(f64),
     Boolean(bool),
     String(String),
-    Callable(Box<dyn LoxCallable>),
-    // Callable(LoxCallable),
+    // Callable(Box<dyn LoxCallable>),
+    Callable(Box<LoxCallable>),
     Nil,
 }
 

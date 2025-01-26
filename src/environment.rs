@@ -7,8 +7,8 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Environment {
-    values: HashMap<String, Value>, // 变量名到值的映射
-    enclosing: Option<Rc<RefCell<Environment>>>,
+    pub(crate) values: HashMap<String, Value>, // 变量名到值的映射
+    pub(crate) enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
 impl Environment {

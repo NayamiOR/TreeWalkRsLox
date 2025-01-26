@@ -3,6 +3,7 @@ mod environment;
 mod expr;
 mod interpreter;
 mod lox_callable;
+mod native_functions;
 mod parser;
 mod runtime_error;
 mod scanner;
