@@ -11,13 +11,38 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub(crate) struct Interpreter {
+    globals: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
     pub(crate) fn new() -> Self {
-        Interpreter {
-            environment: Environment::new(),
+        let globals = Environment::new();
+        let environment = Rc::clone(&globals);
+
+        // Define native functions
+
+        // Define clock function
+        globals.borrow_mut().define(
+            "clock".to_string(),
+            Callable({
+                let f = |_: &mut Interpreter, _: Vec<Box<Value>>| {
+                    let now = std::time::SystemTime::now();
+                    let duration = now.duration_since(std::time::UNIX_EPOCH).unwrap();
+                    Number(duration.as_secs_f64())
+                };
+                Lox::NativeFunction {
+                    arity: 0,
+                    function: Box::new(f),
+                }
+            }),
+        );
+
+        // End of defining native functions
+
+        Self {
+            globals,
+            environment,
         }
     }
     pub(crate) fn interpret(&mut self, statements: Vec<Stmt>) {
@@ -159,6 +184,46 @@ impl crate::expr::Visitor<Result<Value, RuntimeError>> for Interpreter {
             TokenType::BANG => Ok(Boolean(!right_value.as_ref())),
             _ => unreachable!(),
         }
+    }
+
+    fn visit_call_expr(
+        &mut self,
+        callee: &Expr,
+        paren: &Token,
+        arguments: &Vec<Box<Expr>>,
+    ) -> Result<Value, RuntimeError> {
+        let callee = self.evaluate(callee);
+
+        let arguments = arguments
+            .into_iter()
+            .map(|f| match self.evaluate(f) {
+                Ok(v) => Ok(Box::new(v)),
+                Err(e) => Err(e),
+            })
+            .collect::<Result<Vec<Box<Value>>, RuntimeError>>()?;
+
+        let function = match callee {
+            Ok(Callable(lox_callable)) => lox_callable,
+            _ => {
+                return Err(RuntimeError::new(
+                    paren.clone(),
+                    "Can only call functions.".to_string(),
+                ))
+            }
+        };
+
+        if arguments.len() != function.arity() {
+            return Err(RuntimeError {
+                token: paren.clone(),
+                message: format!(
+                    "Expected {} arguments but got {}.",
+                    function.arity(),
+                    arguments.len()
+                ),
+            });
+        }
+
+        Ok(function.call(self, arguments))
     }
 
     fn visit_variable_expr(&mut self, name: &Token) -> Result<Value, RuntimeError> {

@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::lox_callable::LoxFunction;
 use crate::token::Token;
 
 pub(crate) trait Visitor<R> {
@@ -15,6 +16,7 @@ pub(crate) trait Visitor<R> {
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> R;
 }
 
+#[derive(Debug, Clone)]
 pub(crate) enum Stmt {
     Expression {
         expression: Box<Expr>,
@@ -38,6 +40,9 @@ pub(crate) enum Stmt {
         condition: Box<Expr>,
         body: Box<Stmt>,
     },
+    Function {
+        function: Box<LoxFunction>,
+    },
 }
 
 impl Stmt {
@@ -53,6 +58,7 @@ impl Stmt {
                 else_branch,
             } => visitor.visit_if_stmt(condition, then_branch, else_branch.as_deref()),
             Stmt::While { condition, body } => visitor.visit_while_stmt(condition, body),
+            Stmt::Function { function } => todo!(),
         }
     }
 }
