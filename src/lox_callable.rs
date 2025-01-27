@@ -1,5 +1,6 @@
-use crate::{interpreter::Interpreter, stmt::Stmt, token::Token, value::Value};
-use std::fmt::Debug;
+use crate::lox_function::LoxFunction;
+use crate::{interpreter::Interpreter, token::Token, value::Value};
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Clone, Debug)]
 pub enum LoxCallable {
@@ -37,11 +38,6 @@ impl PartialOrd for LoxCallable {
     }
 }
 
-// pub trait LoxCallable: Clone + Debug + PartialEq + PartialOrd {
-//     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Value>) -> Value;
-//     fn arity(&self) -> usize;
-// }
-
 #[derive(Debug, Clone)]
 pub struct LoxNativeFunction {
     pub name: String,
@@ -60,21 +56,8 @@ impl PartialOrd for LoxNativeFunction {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct LoxFunction {
-    pub name: String,
-    pub params: Vec<Token>,
-    pub body: Vec<Stmt>,
+impl Display for LoxNativeFunction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<native fn>")
+    }
 }
-
-// impl PartialEq for LoxFunction {
-//     fn eq(&self, other: &Self) -> bool {
-//         todo!()
-//     }
-// }
-//
-// impl PartialOrd for LoxFunction {
-//     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-//         todo!()
-//     }
-// }

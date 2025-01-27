@@ -1,5 +1,5 @@
 use crate::expr::Expr;
-use crate::lox_callable::LoxFunction;
+use crate::lox_function::LoxFunction;
 use crate::token::Token;
 
 pub(crate) trait Visitor<R> {

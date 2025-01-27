@@ -9,11 +9,10 @@ use std::rc::Rc;
 
 pub fn global_env() -> Rc<RefCell<Environment>> {
     let globals = globals();
-    let env = Rc::new(RefCell::new(Environment {
+    Rc::new(RefCell::new(Environment {
         values: globals,
         enclosing: None,
-    }));
-    env
+    }))
 }
 
 pub fn globals() -> HashMap<String, Value> {

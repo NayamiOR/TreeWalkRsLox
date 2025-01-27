@@ -1,4 +1,5 @@
 use crate::expr::Expr;
+use crate::lox_function::LoxFunction;
 use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
 use crate::token_type::TokenType;
@@ -25,10 +26,6 @@ impl Parser {
         statements
     }
 
-    fn expression(&mut self) -> Result<Expr, ParseError> {
-        self.assignment()
-    }
-
     fn declaration(&mut self) -> Option<Stmt> {
         if self.match_token(&[VAR]) {
             match self.var_declaration() {
@@ -38,6 +35,10 @@ impl Parser {
                 Err(_) => self.synchronize(),
             }
         }
+        if self.match_token(&[FUN]) {
+            return Some(self.function("function".to_string()).unwrap());
+        }
+
         match self.statement() {
             Ok(stmt) => Some(stmt),
             Err(_) => {
@@ -45,6 +46,29 @@ impl Parser {
                 None
             }
         }
+    }
+
+    fn expression(&mut self) -> Result<Expr, ParseError> {
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, ParseError> {
+        let expr = self.or()?;
+        if self.match_token(&[EQUAL]) {
+            let equals = self.previous();
+            let value = self.assignment()?;
+            if let Expr::Variable { name } = expr {
+                return Ok(Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                });
+            }
+            return Err(Self::error(
+                equals,
+                "Invalid assignment target.".to_string(),
+            ));
+        }
+        Ok(expr)
     }
 
     fn statement(&mut self) -> Result<Stmt, ParseError> {
@@ -185,23 +209,32 @@ impl Parser {
         Ok(statements)
     }
 
-    fn assignment(&mut self) -> Result<Expr, ParseError> {
-        let expr = self.or()?;
-        if self.match_token(&[EQUAL]) {
-            let equals = self.previous();
-            let value = self.assignment()?;
-            if let Expr::Variable { name } = expr {
-                return Ok(Expr::Assign {
-                    name,
-                    value: Box::new(value),
-                });
+    fn function(&mut self, kind: String) -> Result<Stmt, ParseError> {
+        let name: Token = self.consume(IDENTIFIER, format!("Expect {} name.", kind))?;
+        self.consume(LEFT_PAREN, format!("Expect '(' after {} name.", kind))?;
+        let mut params = Vec::new();
+        if !self.check(&RIGHT_PAREN) {
+            loop {
+                if params.len() >= 255 {
+                    Self::error(
+                        self.peek(),
+                        "Cannot have more than 255 parameters.".to_string(),
+                    );
+                }
+                params.push(self.consume(IDENTIFIER, "Expect parameter name.".to_string())?);
+
+                if !self.match_token(&[COMMA]) {
+                    break;
+                }
             }
-            return Err(Self::error(
-                equals,
-                "Invalid assignment target.".to_string(),
-            ));
         }
-        Ok(expr)
+        self.consume(RIGHT_PAREN, "Expect ')' after parameters.".to_string())?;
+
+        self.consume(LEFT_BRACE, format!("Expect '{{' before {} body.", kind))?;
+        let body = self.block()?;
+        Ok(Stmt::Function {
+            function: Box::new(LoxFunction { name, body, params }),
+        })
     }
 
     fn or(&mut self) -> Result<Expr, ParseError> {
