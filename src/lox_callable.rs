@@ -1,6 +1,9 @@
-use crate::lox_function::LoxFunction;
+use crate::stmt::LoxFunctionNode;
 use crate::{interpreter::Interpreter, token::Token, value::Value};
 use std::fmt::{Debug, Display, Formatter};
+use crate::environment::Environment;
+use crate::lox_function::LoxFunction;
+use crate::runtime_error::RuntimeError;
 
 #[derive(Clone, Debug)]
 pub enum LoxCallable {
@@ -9,18 +12,24 @@ pub enum LoxCallable {
 }
 
 impl LoxCallable {
-    pub fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Box<Value>>) -> Value {
+    pub fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Box<Value>>) -> Result<Value, RuntimeError> {
         match self {
             LoxCallable::Function(f) => {
-                todo!()
+                let mut environment = Environment::new_enclosing(interpreter.globals.clone());
+                for (i, param) in f.declaration.params.iter().enumerate() {
+                    environment.borrow_mut().define(param.lexeme.clone(), *arguments.get(i).unwrap().clone());
+                }
+
+                interpreter.execute_block(&f.declaration.body, environment)?;
+                Ok(Value::Nil)
             }
-            LoxCallable::NativeFunction(f) => (f.function)(interpreter),
+            LoxCallable::NativeFunction(f) => Ok((f.function)(interpreter)),
         }
     }
 
     pub fn arity(&self) -> usize {
         match self {
-            LoxCallable::Function(f) => f.params.len(),
+            LoxCallable::Function(f) => f.declaration.params.len(),
             LoxCallable::NativeFunction(f) => f.params.len(),
         }
     }

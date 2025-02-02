@@ -1,5 +1,5 @@
 use crate::expr::Expr;
-use crate::lox_function::LoxFunction;
+use crate::stmt::LoxFunctionNode;
 use crate::stmt::Stmt;
 use crate::token::{Literal, Token};
 use crate::token_type::TokenType;
@@ -233,7 +233,7 @@ impl Parser {
         self.consume(LEFT_BRACE, format!("Expect '{{' before {} body.", kind))?;
         let body = self.block()?;
         Ok(Stmt::Function {
-            function: Box::new(LoxFunction { name, body, params }),
+            function: Box::new(LoxFunctionNode { name, body, params }),
         })
     }
 

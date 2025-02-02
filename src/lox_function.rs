@@ -1,9 +1,12 @@
-use crate::stmt::Stmt;
-use crate::token::Token;
+use crate::stmt::LoxFunctionNode;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct LoxFunction {
-    pub name: Token,
-    pub params: Vec<Token>,
-    pub body: Vec<Stmt>,
+    pub(crate) declaration: LoxFunctionNode,
+}
+
+impl LoxFunction {
+    pub fn new(declaration: LoxFunctionNode) -> Self {
+        Self { declaration }
+    }
 }

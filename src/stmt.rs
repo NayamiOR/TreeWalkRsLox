@@ -1,5 +1,4 @@
 use crate::expr::Expr;
-use crate::lox_function::LoxFunction;
 use crate::token::Token;
 
 pub(crate) trait Visitor<R> {
@@ -41,7 +40,7 @@ pub(crate) enum Stmt {
         body: Box<Stmt>,
     },
     Function {
-        function: Box<LoxFunction>,
+        function: Box<LoxFunctionNode>,
     },
 }
 
@@ -61,4 +60,11 @@ impl Stmt {
             Stmt::Function { function } => todo!(),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct LoxFunctionNode {
+    pub name: Token,
+    pub params: Vec<Token>,
+    pub body: Vec<Stmt>,
 }

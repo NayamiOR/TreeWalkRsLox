@@ -12,8 +12,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 pub(crate) struct Interpreter {
-    globals: Rc<RefCell<Environment>>,
-    environment: Rc<RefCell<Environment>>,
+    pub(crate) globals: Rc<RefCell<Environment>>,
+    pub(crate) environment: Rc<RefCell<Environment>>,
 }
 
 impl Interpreter {
@@ -42,7 +42,7 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    fn execute_block(
+    pub(crate) fn execute_block(
         &mut self,
         statements: &Vec<Stmt>,
         environment: Rc<RefCell<Environment>>,
@@ -204,7 +204,7 @@ impl crate::expr::Visitor<Result<Value, RuntimeError>> for Interpreter {
             });
         }
 
-        Ok(function.call(self, arguments))
+        Ok(function.call(self, arguments)?)
     }
 
     fn visit_variable_expr(&mut self, name: &Token) -> Result<Value, RuntimeError> {
