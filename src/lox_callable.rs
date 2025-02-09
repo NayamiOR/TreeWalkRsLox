@@ -1,9 +1,8 @@
-use crate::stmt::LoxFunctionNode;
-use crate::{interpreter::Interpreter, token::Token, value::Value};
-use std::fmt::{Debug, Display, Formatter};
 use crate::environment::Environment;
 use crate::lox_function::LoxFunction;
-use crate::runtime_error::RuntimeError;
+use crate::runtime_error::{Return, RuntimeError};
+use crate::{interpreter::Interpreter, token::Token, value::Value};
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Clone, Debug)]
 pub enum LoxCallable {
@@ -12,15 +11,27 @@ pub enum LoxCallable {
 }
 
 impl LoxCallable {
-    pub fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Box<Value>>) -> Result<Value, RuntimeError> {
+    pub fn call(
+        &self,
+        interpreter: &mut Interpreter,
+        arguments: Vec<Box<Value>>,
+    ) -> Result<Value, RuntimeErrorTrait> {
         match self {
             LoxCallable::Function(f) => {
-                let mut environment = Environment::new_enclosing(interpreter.globals.clone());
+                let environment = Environment::new_enclosing(interpreter.globals.clone());
                 for (i, param) in f.declaration.params.iter().enumerate() {
-                    environment.borrow_mut().define(param.lexeme.clone(), *arguments.get(i).unwrap().clone());
+                    environment
+                        .borrow_mut()
+                        .define(param.lexeme.clone(), *arguments.get(i).unwrap().clone());
                 }
 
-                interpreter.execute_block(&f.declaration.body, environment)?;
+                match interpreter.execute_block(&f.declaration.body, environment) {
+                    Ok(value) => Ok(value),
+                    Err(e) => match e {
+                        Return(Value, RuntimeError) => return Ok(Value),
+                        _ => Err(e),
+                    },
+                }?;
                 Ok(Value::Nil)
             }
             LoxCallable::NativeFunction(f) => Ok((f.function)(interpreter)),
@@ -47,6 +58,19 @@ impl PartialOrd for LoxCallable {
     }
 }
 
+impl Display for LoxCallable {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LoxCallable::Function(func) => {
+                write!(f, "<fn {}>", func.declaration.name.lexeme)
+            }
+            LoxCallable::NativeFunction(func) => {
+                write!(f, "<native fn>")
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct LoxNativeFunction {
     pub name: String,
@@ -62,11 +86,5 @@ impl PartialEq for LoxNativeFunction {
 impl PartialOrd for LoxNativeFunction {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         todo!()
-    }
-}
-
-impl Display for LoxNativeFunction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "<native fn>")
     }
 }

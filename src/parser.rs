@@ -78,6 +78,9 @@ impl Parser {
         if self.match_token(&[PRINT]) {
             return self.print_statement();
         }
+        if self.match_token(&[RETURN]) {
+            return self.return_statement();
+        }
         if self.match_token(&[LEFT_BRACE]) {
             return Ok(Stmt::Block {
                 statements: self.block()?,
@@ -97,6 +100,22 @@ impl Parser {
         self.consume(SEMICOLON, "Expect ';' after value.".to_string())?;
         Ok(Stmt::Print {
             expression: Box::new(value),
+        })
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt, ParseError> {
+        let keyword: Token = self.previous();
+        let mut value = Expr::Literal {
+            value: Literal::Nil,
+        };
+        if !self.check(&SEMICOLON) {
+            value = self.expression()?;
+        }
+
+        self.consume(SEMICOLON, "Expect ';' after return value.".to_string())?;
+        Ok(Stmt::Return {
+            keyword,
+            value: Box::new(value),
         })
     }
 

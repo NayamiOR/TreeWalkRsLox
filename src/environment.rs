@@ -30,7 +30,7 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    pub(crate) fn assign(&mut self, name: &Token, value: Value) -> Result<(), RuntimeError> {
+    pub(crate) fn assign(&mut self, name: &Token, value: Value) -> Result<(), RuntimeErrorTrait> {
         if self.values.contains_key(&name.lexeme) {
             self.values.insert(name.lexeme.clone(), value);
             return Ok(());
@@ -47,7 +47,7 @@ impl Environment {
         })
     }
 
-    pub(crate) fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
+    pub(crate) fn get(&self, name: &Token) -> Result<Value, RuntimeErrorTrait> {
         if let Some(v) = self.values.get(&name.lexeme) {
             return Ok(v.clone());
         }
