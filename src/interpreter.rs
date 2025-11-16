@@ -182,6 +182,7 @@ impl crate::expr::Visitor<Result<Value, Box<dyn Error>>> for Interpreter {
         paren: &Token,
         arguments: &Vec<Box<Expr>>,
     ) -> Result<Value, Box<dyn Error>> {
+        // getCallback(1+2)();
         let callee = self.evaluate(callee);
 
         let arguments = arguments
@@ -309,7 +310,7 @@ impl crate::stmt::Visitor<Result<(), Box<dyn Error>>> for Interpreter {
     }
 
     fn visit_function_stmt(&mut self, stmt: Box<LoxFunctionNode>) -> Result<(), Box<dyn Error>> {
-        let function = LoxFunction::new(stmt.clone());
+        let function = LoxFunction::new(stmt.clone(), self.environment.clone());
         self.environment.borrow_mut().define(
             stmt.name.lexeme.clone(),
             Callable(Box::new(LoxCallable::Function(function))),

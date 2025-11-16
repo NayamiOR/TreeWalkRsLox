@@ -19,7 +19,7 @@ impl LoxCallable {
     ) -> Result<Value, Box<dyn Error>> {
         match self {
             LoxCallable::Function(f) => {
-                let environment = Environment::new_enclosing(interpreter.globals.clone());
+                let environment = Environment::new_enclosing(f.closure.clone());
                 for (i, param) in f.declaration.params.iter().enumerate() {
                     environment
                         .borrow_mut()
